@@ -1,0 +1,9 @@
+**/__pycache__/
+**/LOGS/
+**/RESULTS/
+**/FIGURES/
+**/DataPrepare/
+.vscode
+.DS_Store
+dataloader_test.py
+local_test.py
