@@ -18,8 +18,8 @@ Due to privacy constraints, we are unable to share OD data in this repository. H
 
 ### **1. Clone the Repository**
 ```bash
-git clone https://github.com/nhat-thien/Fed-LSTM-DSTGCRN
-cd Fed-LSTM-DSTGCRN  
+git clone https://github.com/nhat-thien/Federated-LSTM-DSTGCRN
+cd Federated-LSTM-DSTGCRN  
 ```
 
 ### **2. Install Dependencies**
@@ -52,7 +52,7 @@ python Experiments.py
 
 ## **Repository Structure**
 ```
-📂 Fed-LSTM-DSTGCRN  
+📂 Federated-LSTM-DSTGCRN  
 │── 📂 DATA/                    # Folder for datasets  
 │── 📂 FL_HELPERS/              # Handle the federated learning
 │── 📂 MODELS/                  # The models
