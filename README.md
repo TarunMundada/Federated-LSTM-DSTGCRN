@@ -1,7 +1,7 @@
 
 # **Federated Dynamic Model for Spatiotemporal Data Forecasting in Transportation**
 
-This repository contains the implementation of the **Fed-LSTM-DSTGCRN** model, proposed in the manuscript:
+This repository contains the implementation of the **Federated-LSTM-DSTGCRN** model, proposed in the manuscript:
 
 > **"Federated Dynamic Model for Spatiotemporal Data Forecasting in Transportation"**, submitted to IEEE Transactions on Intelligent Transportation Systems (Jan 2025).
 
