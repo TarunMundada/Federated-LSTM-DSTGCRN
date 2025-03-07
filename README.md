@@ -3,7 +3,7 @@
 
 This repository contains the implementation of the **Federated-LSTM-DSTGCRN** model, proposed in the manuscript:
 
-> **"Federated Dynamic Model for Spatiotemporal Data Forecasting in Transportation"**, submitted to IEEE Transactions on Intelligent Transportation Systems (Jan 2025).
+> **"Federated Dynamic Model for Spatiotemporal Data Forecasting in Transportation"**, submitted to Expert Systems With Applications (Feb 2025).
 
 ## **Overview**
 
@@ -68,12 +68,14 @@ python Experiments.py
 If you use this repository in your research, please cite:
 
 ```bibtex
-@article{ToBeUpdated,  
-  title={Federated Dynamic Model for Spatiotemporal Data Forecasting in Transportation},  
-  author={Names},  
-  journal={IEEE Transactions on Intelligent Transportation Systems},  
-  year={2025},  
-  status={Submitted}  
+@misc{pham2025federateddynamicmodelinglearning,
+      title={Federated Dynamic Modeling and Learning for Spatiotemporal Data Forecasting}, 
+      author={Thien Pham and Angelo Furno and Faïcel Chamroukhi and Latifa Oukhellou},
+      year={2025},
+      eprint={2503.04528},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2503.04528}, 
 }
 ```
 
