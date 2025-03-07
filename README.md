@@ -3,7 +3,7 @@
 
 This repository contains the implementation of the **Federated-LSTM-DSTGCRN** model, proposed in the manuscript:
 
-> **"Federated Dynamic Model for Spatiotemporal Data Forecasting in Transportation"**, submitted to Expert Systems With Applications (Feb 2025).
+> **"Federated Dynamic Modeling and Learning for Spatiotemporal Data Forecasting"**, Thien Pham, Angelo Furno, Faïcel Chamroukhi, Latifa Oukhellou, arXiv:2503.04528. March 2025
 
 ## **Overview**
 
