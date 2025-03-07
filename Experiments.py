@@ -5,7 +5,6 @@ The server process runs a Federated Learning server that orchestrates the federa
 The client processes simulate multiple clients participating in the federated learning process.
 
 ---
-Reference: "Federated Dynamic Model For Spatiotemporal Data Forecasting In Transportation", submitted to Expert Systems With Applications (Feb 2025).
 Github: https://github.com/nhat-thien/Federated-LSTM-DSTGCRN
 """
 
