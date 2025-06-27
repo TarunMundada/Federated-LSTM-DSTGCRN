@@ -5,10 +5,10 @@ import torch.nn as nn
 from FL_HELPERS.FL_constants import GENERAL_INFO
 from Hyperparameters import Hyperparameters
 from MODELS.AGCRN.AGCRN import AGCRN
-from MODELS.ARIMA.ARIMA import ARIMA
+# from MODELS.ARIMA.ARIMA import ARIMA
 from MODELS.LSTM_DSTGCRN.LSTM_DSTGCRN import LSTM_DSTGCRN
 from MODELS.GRU.GRU import GRU
-from MODELS.LR.LR import LR
+# from MODELS.LR.LR import LR
 from MODELS.LSTM.LSTM import LSTM 
 
 
@@ -33,11 +33,11 @@ class LocalModel():
         elif self.params.model_name=='FedGRU': 
             self.model = GRU(self.params)
 
-        elif self.params.model_name=='FedARIMA':
-            self.model = ARIMA(self.params)
+        # elif self.params.model_name=='FedARIMA':
+        #     self.model = ARIMA(self.params)
 
-        elif self.params.model_name=='FedLR':
-            self.model = LR(self.params)
+        # elif self.params.model_name=='FedLR':
+        #     self.model = LR(self.params)
 
         # Set seed for reproducibility
         torch.cuda.cudnn_enabled = False
