@@ -8,6 +8,10 @@ The client processes simulate multiple clients participating in the federated le
 Github: https://github.com/nhat-thien/Federated-LSTM-DSTGCRN
 """
 
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+
 from datetime import datetime
 import subprocess
 import time

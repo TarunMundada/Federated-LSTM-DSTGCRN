@@ -24,8 +24,8 @@ from Hyperparameters import Hyperparameters
 from MODELS.LSTM_DSTGCRN.Trainers import Trainer
 import pandas as pd
 
-
-
+import tensorflow as tf
+from tensorflow.keras.optimizers import Adam
 """----------------------------------------------------------------------
 SERVER
 """
@@ -419,8 +419,8 @@ class FL_Client():
                             callbacks=[tensorboard_callback]+callbacks,
                             verbose=verbose)
 
-                if self.server_ip != LOCAL_IP:
-                    os.system(f'tensorboard --logdir={LOG_PATH}')
+                # if self.server_ip != LOCAL_IP:
+                #     os.system(f'tensorboard --logdir={LOG_PATH}')
 
 
 

@@ -17,7 +17,7 @@ import logging
 logging.getLogger('TensorFlow').setLevel(logging.ERROR)
 
 
-LOCAL_IP = "0.0.0.0"
+LOCAL_IP = "127.0.0.1"
 PORT = 11111
 BUFFER_SIZE = 10240
 FORMAT = "utf-8"

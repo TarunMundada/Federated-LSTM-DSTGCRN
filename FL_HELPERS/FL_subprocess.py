@@ -6,6 +6,8 @@ Each client has its own particular data loader.
 ---
 Thien Pham, Oct 2024
 """
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 
 from FL_HELPERS.FL_constants import *
@@ -85,7 +87,9 @@ def run_client(params, client_config, is_FL=True, device=None):
         import torch
         print(f"{'-'*90}\n{GENERAL_INFO} There are {torch.cuda.device_count()} GPUs available\n{'-'*90}")
         if torch.cuda.is_available():
-            torch.cuda.set_device(int(device[5]))
+            if "cuda" in device:
+                torch.cuda.set_device(int(device.split(":")[1]))
+
         else:
             params.device = "cpu"
             
