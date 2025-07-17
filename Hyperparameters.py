@@ -269,6 +269,7 @@
 
 from datetime import datetime
 import itertools
+import torch
 
 FL_SCHEMES = ['FedAvg', 'ClientSideValidation', 'Attentive', 'Module-wise', 'Only-LSTM-module', 'Only-Attention-module', 'Only-AGCRN-module']
 
@@ -392,7 +393,7 @@ class Hyperparameters:
         self.seed = seed
 
         # Data & model-specific hyperparameters
-        self.batch_size = batch_size
+        self.batch_size = 16
         self.epochs = epochs
         self.lookback = lookback
         self.lookahead = lookahead
@@ -422,7 +423,7 @@ class Hyperparameters:
         self.log_dir = f"LOGS/{self.model_name}-" + datetime.now().strftime("%Y%m%d-%H%M")
 
         self.save_arrays_EDA = False
-        self.device = device  # <-- Assigned device
+        self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'  # <-- Assigned device
         self.log_step = 10
 
         self.TNE = False

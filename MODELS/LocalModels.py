@@ -63,7 +63,18 @@ class LocalModel():
         if 0:
             print(f"{GENERAL_INFO} {self.params.model_name} Using {self.params.device}")
 
-        self.model = self.model.to(self.params.device)
+        device = self.params.device
+
+        # Safety check
+        if device.startswith('cuda'):
+            if not torch.cuda.is_available():
+                device = 'cpu'
+            else:
+                index = int(device.split(':')[-1])
+                if index >= torch.cuda.device_count():
+                    device = 'cuda:0'
+
+        self.model = self.model.to(device)
 
                     
         
