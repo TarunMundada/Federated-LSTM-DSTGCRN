@@ -1,6 +1,8 @@
 import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from math import sqrt
+from vmdpy import VMD
+
 
 
 def mean_absolute_percentage_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -45,3 +47,17 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
         result[key] = []
       result[key].append(value)
   return result
+
+
+def apply_vmd_to_node_series(signal, alpha=2000, tau=0., K=5, DC=0, init=1, tol=1e-7):
+    """
+    Applies VMD to a single 1D signal (e.g., one node's time series).
+    Returns all decomposed IMFs.
+    """
+    # Ensure signal is float64
+    signal = signal.astype(np.float64)
+    
+    # Apply VMD
+    u, _, _ = VMD(signal, alpha, tau, K, DC, init, tol)  # u shape: (K, T)
+    print(f"[VMD] Applied VMD to node with shape: {u.shape}")
+    return u  # return IMFs

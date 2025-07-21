@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 
+from MODELS.HELPERS.Utils import apply_vmd_to_node_series
+
 def load_and_transform_data(trips_file):
 
     trips = pd.read_csv(trips_file)
@@ -15,7 +17,20 @@ def load_and_transform_data(trips_file):
     trips = trips.set_index("timestamp")
     weathers = weathers.set_index("timestamp")
 
-    trips_np = trips.to_numpy()
+
+    #updtaed for vmd
+    imf_list = []
+
+    for node_idx in range(trips.shape[1]):
+        node_series = trips.iloc[:, node_idx].values
+        imfs = apply_vmd_to_node_series(node_series, K=3)  # Shape: (3, T)
+        imf_list.append(imfs)
+
+    imfs_stacked = np.stack(imf_list, axis=1)
+    imfs_stacked = imfs_stacked.transpose(2, 1, 0)
+    
+    
+    
     weathers_np = weathers.to_numpy()
 
     # One-hot encoding for season
@@ -41,7 +56,7 @@ def load_and_transform_data(trips_file):
 
     data = np.concatenate(
         (
-            trips_np[:, :, np.newaxis],
+            imfs_stacked,
             temperature[:, :, np.newaxis],
             precipitation[:, :, np.newaxis],
             hour_reshaped[:, :, np.newaxis],
