@@ -16,19 +16,248 @@ Thien Pham, Oct 2024
 """
 
 
+# from MODELS.HELPERS.Helpers import DEBUG_sum_weights, client_validate_weights, compute_metrics
+# from FL_HELPERS.FL_constants import *
+# from FL_HELPERS.FL_socket import *
+# import torch
+# from Hyperparameters import Hyperparameters
+# from MODELS.LSTM_DSTGCRN.Trainers import Trainer
+# import pandas as pd
+
+# import tensorflow as tf
+# from tensorflow.keras.optimizers import Adam
+# """----------------------------------------------------------------------
+# SERVER
+# """
+# class FL_Server():
+
+#     def __init__(self, global_model, num_clients, params, is_FL=True, port=PORT, multi_system=False):
+#         self.s = socket.socket()
+#         self.executor = concurrent.futures.ThreadPoolExecutor(num_clients)
+#         self.global_model = global_model
+#         self.num_clients = num_clients
+#         self.rounds = params.FL_rounds
+#         self.FL_scheme = params.FL_scheme
+#         self.params = params
+#         self.port = port 
+#         self.is_FL = is_FL 
+#         self.multi_system = multi_system
+#         self.results = []
+#         self.connections = []
+
+
+#     def __initiate_socket(self):
+#         self.s.bind(('', self.port))
+#         print(f"{SERVER_INFO_CONNECTION} socket binded to {self.port}")
+
+#         self.s.listen(self.num_clients)
+#         print(f"{SERVER_INFO_CONNECTION} socket is listening...")
+
+
+#     # This function runs in the first round to accept all connections and distribute the global model
+#     def __accept_connection(self):
+#         connection, addr = self.s.accept()
+#         self.connections.append(connection)
+#         print(f'{SERVER_INFO_CONNECTION} Got connection from {addr[0]}:{addr[1]}')
+        
+#         # Broadcast the global model
+#         res = self.executor.submit(self.__handle_client, connection, True, True)
+#         self.results.append(res)
+
+
+#     def __close_connections(self):
+#         for connection in self.connections:
+#             connection.close()
+#         print(f"{'-'*90}\n{SERVER_INFO_CONNECTION} SERVER CLOSED CONNECTIONS\n{'-'*90}")
+
+
+#     def __handle_client(self, connection, is_send_rounds=True, is_send_model=True):
+        
+#         if is_send_rounds:
+#             connection.send(str(self.rounds).encode(FORMAT))
+
+#         if is_send_model:
+#             # The server only send the model object once, after the initial connections
+#             # to distribute the model to all clients
+#             socket_send(connection, self.global_model)
+#         else:
+#             # Later, the server send only the weights, to precerve the model object at clients
+#             socket_send(connection, self.global_model.get_weights()[0])
+
+#         new_from_client = socket_receive(connection, BUFFER_SIZE, self.params)
+#         return new_from_client
+
+
+
+
+#     #--------------------------------------
+#     # Main federated scheme 🟥
+#     #--------------------------------------
+#     def __FL_aggregate(self, new_weights_list, layer_scores_list=None):
+
+
+#         if self.FL_scheme in ['FedAvg', 'Only-LSTM-module', 'Only-Attention-module', 'Only-AGCRN-module']:
+            
+#             aggregated_weights = []
+            
+#             for layer in range(len(new_weights_list[0])):
+#                 sum_layer = np.zeros_like(new_weights_list[0][layer])
+#                 for client_weights in new_weights_list:
+#                     sum_layer += client_weights[layer]
+#                 aggregated_weights.append(sum_layer / self.num_clients)
+
+
+#         if self.FL_scheme=='Attentive' or self.FL_scheme=='AttentiveCSV':
+            
+#             aggregated_weights = []
+
+#             for layer in range(len(new_weights_list[0])):
+#                 new_layer = np.zeros_like(new_weights_list[0][layer])
+
+#                 for client_idx, _ in enumerate(new_weights_list):
+#                     EuclideanDistances = []
+
+#                     for other_client_idx, _ in enumerate(new_weights_list):
+                        
+#                         # Calculate the distance between the current layer and the corresponding layer of other clients
+#                         dis = np.linalg.norm(new_weights_list[client_idx][layer] - new_weights_list[other_client_idx][layer])
+#                         EuclideanDistances.append(dis)
+                    
+#                     EuclideanDistances = 1/(1+np.array(EuclideanDistances))
+    
+#                     scores = np.array(EuclideanDistances)/sum(EuclideanDistances)
+
+#                     for i, local_weight in enumerate(new_weights_list):
+#                         new_layer += local_weight[layer] * scores[i]
+
+                
+#                 # Append to the aggregated weights list
+#                 aggregated_weights.append(new_layer/self.num_clients)
+#                 # Why divide by the number of clients ? Because the scores are already sum to one, dividing makes the weights downscaled ?
+#                 # aggregated_weights.append(new_layer)
+
+
+#         if self.FL_scheme=='Module-wise' or self.FL_scheme=='ClientSideValidation':
+            
+#             aggregated_weights = []
+
+#             if self.params.to_weight_clients:
+#                 layer_scores_2d = np.array(layer_scores_list).reshape(len(layer_scores_list), -1)
+#                 sum_layer_scores = np.sum(layer_scores_2d, axis=0)
+#                 scores_2d = (layer_scores_2d)/sum_layer_scores
+                
+#                 # Weight the weights by the layer scores
+#                 for i, _ in enumerate(new_weights_list):
+#                     current_layer = np.zeros_like(new_weights_list[0][i])
+#                     for new_weight, score in zip(new_weights_list, scores_2d[:,i]):
+#                         current_layer += score*new_weight[i]
+#                     aggregated_weights.append(current_layer)
+
+#             else:
+#                 # Just take the average of the weights as FedAvg
+#                 for i, _ in enumerate(new_weights_list):
+#                     current_layer = np.zeros_like(new_weights_list[0][i])
+#                     for new_weight in new_weights_list:
+#                         current_layer += new_weight[i]
+#                     aggregated_weights.append(current_layer/self.num_clients)
+
+#         self.global_model.set_weights(aggregated_weights)
+
+
+
+#     #--------------------------------------
+#     # Main federated loop
+#     #--------------------------------------
+#     def __FL_loop(self):
+
+#         for i in range(self.rounds):
+#             start_time = time.time()
+#             new_weights_list = []
+#             layer_scores_list = []
+#             for f in concurrent.futures.as_completed(self.results):
+#                 received_data = f.result() #List
+#                 new_weights_list.append(received_data[0])
+#                 layer_scores_list.append(received_data[1])
+
+#             self.__FL_aggregate(new_weights_list, layer_scores_list)
+
+#             self.results = []
+
+#             for connection in self.connections:
+#                 # Because the model is already distributed, I don't need to send the model again (is_send_model=False)
+#                 res = self.executor.submit(self.__handle_client, connection, False, False)
+#                 self.results.append(res)
+
+#             print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
+
+
+
+#     #🟪
+#     def train(self):
+
+#         self.__initiate_socket()
+
+#         # The first round to accept all connections and distribute the global model
+#         for _ in range(self.num_clients):
+#             self.__accept_connection()
+#         print(f"{SERVER_INFO_CONNECTION} Broadcasted the global model to all clients.")
+
+#         if self.is_FL:
+#             if len(self.connections) == self.num_clients:
+#                 print(f"{'-'*90}\n{SERVER_INFO_TRAINING} Received connections from {self.num_clients} clients. Begin the learning process\n{'-'*90}")
+#                 # The main federated learning loop
+#                 self.__FL_loop()
+#                 print(f"{SERVER_INFO_TRAINING} ✅ FEDERATED LEARNING PROCESS COMPLETED")
+
+#         else:
+#             if len(self.connections) == self.num_clients:
+#             # Without this part, the server will close the connections after distributing the model
+#                 for f in concurrent.futures.as_completed(self.results):
+#                     model = f.result()
+
+#         # This stupid line took me 2 days to figure out the error :(
+#         # self.__close_connections()
+
+#         if not self.multi_system:
+#             pass
+
+
+import glob
+import os
+import torch
+import time
 from MODELS.HELPERS.Helpers import DEBUG_sum_weights, client_validate_weights, compute_metrics
 from FL_HELPERS.FL_constants import *
 from FL_HELPERS.FL_socket import *
-import torch
 from Hyperparameters import Hyperparameters
 from MODELS.LSTM_DSTGCRN.Trainers import Trainer
 import pandas as pd
-
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adam
-"""----------------------------------------------------------------------
-SERVER
-"""
+from keras.optimizers import Adam
+
+
+# ---------------------------
+# 🧠 Checkpoint Helpers
+# ---------------------------
+def save_checkpoint(model, round_num, path='checkpoints'):
+    os.makedirs(path, exist_ok=True)
+    weights = model.get_weights()[0]
+    torch.save({
+        'round': round_num,
+        'weights': weights
+    }, os.path.join(path, f'round_{round_num}.pt'))
+
+def load_latest_checkpoint(model, path='checkpoints'):
+    checkpoints = glob.glob(os.path.join(path, 'round_*.pt'))
+    if not checkpoints:
+        return 0
+    latest_ckpt = max(checkpoints, key=os.path.getctime)
+    checkpoint = torch.load(latest_ckpt)
+    model.set_weights(checkpoint['weights'])
+    print(f"[Checkpoint] Resumed from {latest_ckpt}")
+    return checkpoint['round'] + 1
+
+
 class FL_Server():
 
     def __init__(self, global_model, num_clients, params, is_FL=True, port=PORT, multi_system=False):
@@ -39,165 +268,100 @@ class FL_Server():
         self.rounds = params.FL_rounds
         self.FL_scheme = params.FL_scheme
         self.params = params
-        self.port = port 
-        self.is_FL = is_FL 
+        self.port = port
+        self.is_FL = is_FL
         self.multi_system = multi_system
         self.results = []
         self.connections = []
 
-
     def __initiate_socket(self):
         self.s.bind(('', self.port))
         print(f"{SERVER_INFO_CONNECTION} socket binded to {self.port}")
-
         self.s.listen(self.num_clients)
         print(f"{SERVER_INFO_CONNECTION} socket is listening...")
 
-
-    # This function runs in the first round to accept all connections and distribute the global model
     def __accept_connection(self):
         connection, addr = self.s.accept()
         self.connections.append(connection)
         print(f'{SERVER_INFO_CONNECTION} Got connection from {addr[0]}:{addr[1]}')
-        
-        # Broadcast the global model
         res = self.executor.submit(self.__handle_client, connection, True, True)
         self.results.append(res)
-
 
     def __close_connections(self):
         for connection in self.connections:
             connection.close()
         print(f"{'-'*90}\n{SERVER_INFO_CONNECTION} SERVER CLOSED CONNECTIONS\n{'-'*90}")
 
-
     def __handle_client(self, connection, is_send_rounds=True, is_send_model=True):
-        
         if is_send_rounds:
             connection.send(str(self.rounds).encode(FORMAT))
 
         if is_send_model:
-            # The server only send the model object once, after the initial connections
-            # to distribute the model to all clients
             socket_send(connection, self.global_model)
         else:
-            # Later, the server send only the weights, to precerve the model object at clients
             socket_send(connection, self.global_model.get_weights()[0])
 
         new_from_client = socket_receive(connection, BUFFER_SIZE, self.params)
         return new_from_client
 
-
-
-
-    #--------------------------------------
-    # Main federated scheme 🟥
-    #--------------------------------------
     def __FL_aggregate(self, new_weights_list, layer_scores_list=None):
-
+        aggregated_weights = []
 
         if self.FL_scheme in ['FedAvg', 'Only-LSTM-module', 'Only-Attention-module', 'Only-AGCRN-module']:
-            
-            aggregated_weights = []
-            
             for layer in range(len(new_weights_list[0])):
                 sum_layer = np.zeros_like(new_weights_list[0][layer])
                 for client_weights in new_weights_list:
                     sum_layer += client_weights[layer]
                 aggregated_weights.append(sum_layer / self.num_clients)
 
-
-        if self.FL_scheme=='Attentive' or self.FL_scheme=='AttentiveCSV':
-            
-            aggregated_weights = []
-
+        elif self.FL_scheme in ['Attentive', 'AttentiveCSV']:
             for layer in range(len(new_weights_list[0])):
                 new_layer = np.zeros_like(new_weights_list[0][layer])
-
                 for client_idx, _ in enumerate(new_weights_list):
-                    EuclideanDistances = []
-
-                    for other_client_idx, _ in enumerate(new_weights_list):
-                        
-                        # Calculate the distance between the current layer and the corresponding layer of other clients
-                        dis = np.linalg.norm(new_weights_list[client_idx][layer] - new_weights_list[other_client_idx][layer])
-                        EuclideanDistances.append(dis)
-                    
-                    EuclideanDistances = 1/(1+np.array(EuclideanDistances))
-    
-                    scores = np.array(EuclideanDistances)/sum(EuclideanDistances)
-
+                    distances = [np.linalg.norm(new_weights_list[client_idx][layer] - new_weights_list[other_idx][layer]) for other_idx in range(len(new_weights_list))]
+                    scores = 1 / (1 + np.array(distances))
+                    scores /= scores.sum()
                     for i, local_weight in enumerate(new_weights_list):
                         new_layer += local_weight[layer] * scores[i]
+                aggregated_weights.append(new_layer / self.num_clients)
 
-                
-                # Append to the aggregated weights list
-                aggregated_weights.append(new_layer/self.num_clients)
-                # Why divide by the number of clients ? Because the scores are already sum to one, dividing makes the weights downscaled ?
-                # aggregated_weights.append(new_layer)
-
-
-        if self.FL_scheme=='Module-wise' or self.FL_scheme=='ClientSideValidation':
-            
-            aggregated_weights = []
-
+        elif self.FL_scheme in ['Module-wise', 'ClientSideValidation']:
             if self.params.to_weight_clients:
-                layer_scores_2d = np.array(layer_scores_list).reshape(len(layer_scores_list), -1)
-                sum_layer_scores = np.sum(layer_scores_2d, axis=0)
-                scores_2d = (layer_scores_2d)/sum_layer_scores
-                
-                # Weight the weights by the layer scores
-                for i, _ in enumerate(new_weights_list):
-                    current_layer = np.zeros_like(new_weights_list[0][i])
-                    for new_weight, score in zip(new_weights_list, scores_2d[:,i]):
-                        current_layer += score*new_weight[i]
+                scores_2d = np.array(layer_scores_list) / np.sum(layer_scores_list, axis=0)
+                for i in range(len(new_weights_list[0])):
+                    current_layer = sum(score * new_weights[i] for score, new_weights in zip(scores_2d[:, i], new_weights_list))
                     aggregated_weights.append(current_layer)
-
             else:
-                # Just take the average of the weights as FedAvg
-                for i, _ in enumerate(new_weights_list):
-                    current_layer = np.zeros_like(new_weights_list[0][i])
-                    for new_weight in new_weights_list:
-                        current_layer += new_weight[i]
-                    aggregated_weights.append(current_layer/self.num_clients)
+                for i in range(len(new_weights_list[0])):
+                    current_layer = sum(new_weight[i] for new_weight in new_weights_list) / self.num_clients
+                    aggregated_weights.append(current_layer)
 
         self.global_model.set_weights(aggregated_weights)
 
-
-
-    #--------------------------------------
-    # Main federated loop
-    #--------------------------------------
     def __FL_loop(self):
-
-        for i in range(self.rounds):
+        start_round = load_latest_checkpoint(self.global_model)
+        for i in range(start_round, self.rounds):
             start_time = time.time()
             new_weights_list = []
             layer_scores_list = []
+
             for f in concurrent.futures.as_completed(self.results):
-                received_data = f.result() #List
+                received_data = f.result()
                 new_weights_list.append(received_data[0])
                 layer_scores_list.append(received_data[1])
 
             self.__FL_aggregate(new_weights_list, layer_scores_list)
+            save_checkpoint(self.global_model, i)
 
             self.results = []
-
             for connection in self.connections:
-                # Because the model is already distributed, I don't need to send the model again (is_send_model=False)
                 res = self.executor.submit(self.__handle_client, connection, False, False)
                 self.results.append(res)
 
             print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
 
-
-
-    #🟪
     def train(self):
-
         self.__initiate_socket()
-
-        # The first round to accept all connections and distribute the global model
         for _ in range(self.num_clients):
             self.__accept_connection()
         print(f"{SERVER_INFO_CONNECTION} Broadcasted the global model to all clients.")
@@ -205,23 +369,16 @@ class FL_Server():
         if self.is_FL:
             if len(self.connections) == self.num_clients:
                 print(f"{'-'*90}\n{SERVER_INFO_TRAINING} Received connections from {self.num_clients} clients. Begin the learning process\n{'-'*90}")
-                # The main federated learning loop
                 self.__FL_loop()
                 print(f"{SERVER_INFO_TRAINING} ✅ FEDERATED LEARNING PROCESS COMPLETED")
 
         else:
             if len(self.connections) == self.num_clients:
-            # Without this part, the server will close the connections after distributing the model
                 for f in concurrent.futures.as_completed(self.results):
-                    model = f.result()
-
-        # This stupid line took me 2 days to figure out the error :(
-        # self.__close_connections()
+                    _ = f.result()
 
         if not self.multi_system:
             pass
-
-
 
 
 """----------------------------------------------------------------------

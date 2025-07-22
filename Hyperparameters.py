@@ -278,12 +278,12 @@ def get_hyperparameters(model_name, is_FL):
     if is_FL:
         hyperparameters = {
             'is_FL': [True],
-            'FL_rounds': [50],
+            'FL_rounds': [1],
             'FL_scheme': FL_SCHEMES[1:2],
             'to_weight_clients': [False],
             'use_CSV': [False],
             'batch_size': [32],
-            'epochs': [10],
+            'epochs': [1],
             'num_layers_node': [2],
             'hidden_dim_node': [16],
             'embed_dim': [16],
@@ -296,7 +296,7 @@ def get_hyperparameters(model_name, is_FL):
             'attention_layer': [True],
             'gru_layer': [False],
             'lstm_layer': [True],
-            'device': ['cuda:0']  # <-- Added device here
+            'device': ['cuda:0'] 
         }
     else:
         hyperparameters = {
@@ -318,7 +318,7 @@ def get_hyperparameters(model_name, is_FL):
             'lr_init': [0.001],
             'gru_layer': [False],
             'lstm_layer': [False],
-            'device': ['cuda:0']  # <-- Added device here too
+            'device': ['cuda:0'] 
         }
 
     hyperparameter_combinations = list(itertools.product(*hyperparameters.values()))
