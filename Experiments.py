@@ -123,7 +123,8 @@ def main(is_FL, TEST_CASE_ID=1, PARAM_ID=0):
 if __name__ == "__main__":
 
 
-    for is_FL in [False]:
+    # for is_FL in [False]:
+    for is_FL in [True]:
         
         #--------------------------------------------------------------------
         # Test case ID, see TestCase.py
