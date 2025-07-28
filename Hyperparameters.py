@@ -278,12 +278,12 @@ def get_hyperparameters(model_name, is_FL):
     if is_FL:
         hyperparameters = {
             'is_FL': [True],
-            'FL_rounds': [1],
+            'FL_rounds': [10],
             'FL_scheme': FL_SCHEMES[1:2],
             'to_weight_clients': [False],
             'use_CSV': [False],
             'batch_size': [32],
-            'epochs': [1],
+            'epochs': [20],
             'num_layers_node': [2],
             'hidden_dim_node': [16],
             'embed_dim': [16],

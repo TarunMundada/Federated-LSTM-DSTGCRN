@@ -647,6 +647,9 @@ class FL_Client():
             Y_original = scaler.inverse_transform(Y.reshape(-1, self.height*self.width))
             Y_original = Y_original.reshape(Y.shape)
             
+            np.save(os.path.join(self.results_path, f"{self.name}_predictions.npy"), Y_predicted)
+            np.save(os.path.join(self.results_path, f"{self.name}_ground_truth.npy"), Y_original)
+            
             MAE = compute_metrics(Y_predicted, Y_original, metric='MAE')
             MSE = compute_metrics(Y_predicted, Y_original, metric='MSE')
             NRMSE = compute_metrics(Y_predicted, Y_original, metric='NRMSE')
@@ -654,7 +657,6 @@ class FL_Client():
             MAPE  = compute_metrics(Y_predicted, Y_original, metric='MAPE')
             R2    = compute_metrics(Y_predicted, Y_original, metric='R2')
             
-
             print(f"{CLIENT_INFO_TESTING} {self.name} Metrics:")
             print(f"{CLIENT_INFO_TESTING} {self.name} 📊 MAE: {MAE:.2f} (passengers)")
             print(f"{CLIENT_INFO_TESTING} {self.name} 📊 MAPE: {MAPE:.2f} (%)")
