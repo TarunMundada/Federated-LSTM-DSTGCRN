@@ -29,8 +29,6 @@ def load_and_transform_data(trips_file):
     imfs_stacked = np.stack(imf_list, axis=1)
     imfs_stacked = imfs_stacked.transpose(2, 1, 0)
     
-    
-    
     weathers_np = weathers.to_numpy()
 
     # One-hot encoding for season

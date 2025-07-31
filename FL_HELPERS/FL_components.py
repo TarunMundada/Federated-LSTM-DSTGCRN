@@ -239,23 +239,46 @@ from keras.optimizers import Adam
 # ---------------------------
 # 🧠 Checkpoint Helpers
 # ---------------------------
-def save_checkpoint(model, round_num, path='checkpoints'):
+# def save_checkpoint(model, round_num, path='checkpoints'):
+#     os.makedirs(path, exist_ok=True)
+#     weights = model.get_weights()[0]
+#     torch.save({
+#         'round': round_num,
+#         'weights': weights
+#     }, os.path.join(path, f'round_{round_num}.pt'))
+
+# def load_latest_checkpoint(model, path='checkpoints'):
+#     checkpoints = glob.glob(os.path.join(path, 'round_*.pt'))
+#     if not checkpoints:
+#         return 0
+#     latest_ckpt = max(checkpoints, key=os.path.getctime)
+#     checkpoint = torch.load(latest_ckpt)
+#     model.set_weights(checkpoint['weights'])
+#     print(f"[Checkpoint] Resumed from {latest_ckpt}")
+#     return checkpoint['round'] + 1
+def save_checkpoint(model, round_num, epoch_num=None, path='checkpoints'):
     os.makedirs(path, exist_ok=True)
     weights = model.get_weights()[0]
+    if epoch_num is not None:
+        ckpt_name = f'round_{round_num}_epoch_{epoch_num}.pt'
+    else:
+        ckpt_name = f'round_{round_num}.pt'
     torch.save({
         'round': round_num,
+        'epoch': epoch_num,
         'weights': weights
-    }, os.path.join(path, f'round_{round_num}.pt'))
+    }, os.path.join(path, ckpt_name))
+
 
 def load_latest_checkpoint(model, path='checkpoints'):
     checkpoints = glob.glob(os.path.join(path, 'round_*.pt'))
     if not checkpoints:
-        return 0
+        return 0, 0  # round, epoch
     latest_ckpt = max(checkpoints, key=os.path.getctime)
     checkpoint = torch.load(latest_ckpt)
     model.set_weights(checkpoint['weights'])
     print(f"[Checkpoint] Resumed from {latest_ckpt}")
-    return checkpoint['round'] + 1
+    return checkpoint.get('round', 0), checkpoint.get('epoch', 0)
 
 
 class FL_Server():
@@ -338,9 +361,32 @@ class FL_Server():
 
         self.global_model.set_weights(aggregated_weights)
 
+    # def __FL_loop(self):
+    #     start_round = load_latest_checkpoint(self.global_model)
+    #     for i in range(start_round, self.rounds):
+    #         start_time = time.time()
+    #         new_weights_list = []
+    #         layer_scores_list = []
+
+    #         for f in concurrent.futures.as_completed(self.results):
+    #             received_data = f.result()
+    #             new_weights_list.append(received_data[0])
+    #             layer_scores_list.append(received_data[1])
+
+    #         self.__FL_aggregate(new_weights_list, layer_scores_list)
+    #         save_checkpoint(self.global_model, i)
+
+    #         self.results = []
+    #         for connection in self.connections:
+    #             res = self.executor.submit(self.__handle_client, connection, False, False)
+    #             self.results.append(res)
+
+    #         print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
+    
     def __FL_loop(self):
-        start_round = load_latest_checkpoint(self.global_model)
-        for i in range(start_round, self.rounds):
+        start_round, start_epoch = load_latest_checkpoint(self.global_model)
+        
+        for round_i in range(start_round, self.rounds):
             start_time = time.time()
             new_weights_list = []
             layer_scores_list = []
@@ -351,14 +397,21 @@ class FL_Server():
                 layer_scores_list.append(received_data[1])
 
             self.__FL_aggregate(new_weights_list, layer_scores_list)
-            save_checkpoint(self.global_model, i)
+
+            # Save round checkpoint as usual
+            save_checkpoint(self.global_model, round_i)
+
+            # Epoch-wise saving (clients must report how many epochs completed)
+            for epoch_i in range(self.params.epochs):  # or trainer.epochs if client sends this
+                save_checkpoint(self.global_model, round_i, epoch_num=epoch_i)
 
             self.results = []
             for connection in self.connections:
                 res = self.executor.submit(self.__handle_client, connection, False, False)
                 self.results.append(res)
 
-            print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
+            print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {round_i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
+
 
     def train(self):
         self.__initiate_socket()
