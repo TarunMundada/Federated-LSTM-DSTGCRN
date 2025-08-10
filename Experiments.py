@@ -200,9 +200,8 @@ def main(is_FL, TEST_CASE_ID=1, PARAM_ID=0):
         f"run_server(params[{PARAM_ID}], {num_clients}, is_FL={is_FL})"
     )
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, GPU_IDs))
-    server_process = subprocess.Popen(
-        [r"C:\Users\Admin\Downloads\fed_lstm\fed\Scripts\python.exe", "-c", python_command]
-    )
+    server_process = subprocess.Popen([sys.executable, "-c", python_command])
+
     time.sleep(5)
     print(f"{'-'*90}\n{GENERAL_INFO} SERVER STARTED\n{'-'*90}")
 
@@ -222,9 +221,8 @@ def main(is_FL, TEST_CASE_ID=1, PARAM_ID=0):
             f"run_client(params[{PARAM_ID}], clients_configs[{i}], is_FL={is_FL}, device='cuda:{gpu_id}')"
         )
         os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, GPU_IDs))
-        client_process = subprocess.Popen(
-            [r"C:\Users\Admin\Downloads\fed_lstm\fed\Scripts\python.exe", "-c", python_command]
-        )
+        client_process = subprocess.Popen([sys.executable, "-c", python_command])
+
         print(f"{GENERAL_INFO} {client_config['client_name']}: Client machine started on GPU {gpu_id}")
         client_processes.append(client_process)
         time.sleep(1)

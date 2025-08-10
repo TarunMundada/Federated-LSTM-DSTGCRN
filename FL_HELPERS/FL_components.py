@@ -226,14 +226,19 @@ import glob
 import os
 import torch
 import time
+import concurrent.futures
 from MODELS.HELPERS.Helpers import DEBUG_sum_weights, client_validate_weights, compute_metrics
 from FL_HELPERS.FL_constants import *
 from FL_HELPERS.FL_socket import *
 from Hyperparameters import Hyperparameters
 from MODELS.LSTM_DSTGCRN.Trainers import Trainer
+from logger_util import log_round, save_log_json, save_log_pickle
+
 import pandas as pd
 import tensorflow as tf
 from keras.optimizers import Adam
+
+
 
 
 # ---------------------------
@@ -383,35 +388,96 @@ class FL_Server():
 
     #         print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
     
-    def __FL_loop(self):
-        start_round, start_epoch = load_latest_checkpoint(self.global_model)
+    # def __FL_loop(self):
+    #     start_round, start_epoch = load_latest_checkpoint(self.global_model)
         
+    #     for round_i in range(start_round, self.rounds):
+    #         start_time = time.time()
+    #         new_weights_list = []
+    #         layer_scores_list = []
+
+    #         for f in concurrent.futures.as_completed(self.results):
+    #             received_data = f.result()
+    #             new_weights_list.append(received_data[0])
+    #             layer_scores_list.append(received_data[1])
+
+    #         self.__FL_aggregate(new_weights_list, layer_scores_list)
+
+    #         # Save round checkpoint as usual
+    #         save_checkpoint(self.global_model, round_i)
+
+    #         # Epoch-wise saving (clients must report how many epochs completed)
+    #         for epoch_i in range(self.params.epochs):  # or trainer.epochs if client sends this
+    #             save_checkpoint(self.global_model, round_i, epoch_num=epoch_i)
+
+    #         self.results = []
+    #         for connection in self.connections:
+    #             res = self.executor.submit(self.__handle_client, connection, False, False)
+    #             self.results.append(res)
+
+    #         print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {round_i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
+
+    def __FL_loop(self):
+        datasets = ["chi_taxi", "nyc_bike", "nyc_taxi"]
+        start_round = 0  # Assuming no resume
+
         for round_i in range(start_round, self.rounds):
             start_time = time.time()
-            new_weights_list = []
-            layer_scores_list = []
+            print(f"{SERVER_INFO_TRAINING} 🚀 Starting FL ROUND {round_i+1}/{self.rounds}")
 
-            for f in concurrent.futures.as_completed(self.results):
-                received_data = f.result()
-                new_weights_list.append(received_data[0])
-                layer_scores_list.append(received_data[1])
+            # Reset per-round completion tracker
+            completed_datasets = set()
 
-            self.__FL_aggregate(new_weights_list, layer_scores_list)
+            # Submit all datasets for processing
+            futures = {}
+            for dataset_name, connection in zip(datasets, self.connections):
+                f = self.executor.submit(
+                    self.__handle_client,
+                    connection,
+                    False,  # whatever your params are
+                    False
+                )
+                futures[f] = dataset_name
 
-            # Save round checkpoint as usual
-            save_checkpoint(self.global_model, round_i)
+            # Wait for datasets to finish in any order
+            for future in concurrent.futures.as_completed(futures):
+                dataset_name = futures[future]
+                try:
+                    new_weights, layer_scores, y_true, y_pred, loss_value, module_replacement, gatn_attention, gpu_memory = future.result()
 
-            # Epoch-wise saving (clients must report how many epochs completed)
-            for epoch_i in range(self.params.epochs):  # or trainer.epochs if client sends this
-                save_checkpoint(self.global_model, round_i, epoch_num=epoch_i)
+                    # Aggregate weights for that dataset
+                    self.__FL_aggregate([new_weights], [layer_scores])
 
-            self.results = []
-            for connection in self.connections:
-                res = self.executor.submit(self.__handle_client, connection, False, False)
-                self.results.append(res)
+                    # Log result immediately for this dataset
+                    log_round(
+                        round_num=round_i,
+                        y_true=y_true,
+                        y_pred=y_pred,
+                        loss_value=loss_value,
+                        start_time=start_time,
+                        module_replacement=module_replacement,
+                        gatn_attention=gatn_attention,
+                        gpu_memory=gpu_memory
+                    )
 
-            print(f'{SERVER_INFO_TRAINING} ✅ FL ROUND {round_i+1}/{self.rounds} COMPLETED | {round(time.time()-start_time, 2)} seconds')
+                    # Save this dataset's log to its own file
+                    json_path = f"{dataset_name}_round{round_i+1}.json"
+                    pkl_path = f"{dataset_name}_round{round_i+1}.pkl"
+                    save_log_json(json_path)
+                    save_log_pickle(pkl_path)
 
+                    print(f"{SERVER_INFO_TRAINING} ✅ {dataset_name} completed round {round_i+1} and saved logs.")
+                    completed_datasets.add(dataset_name)
+
+                except Exception as e:
+                    print(f"{SERVER_ERROR} Dataset {dataset_name} failed in round {round_i+1}: {e}")
+
+            # Wait until all datasets complete before moving to next round
+            if len(completed_datasets) < len(datasets):
+                print(f"{SERVER_WARNING} Not all datasets finished round {round_i+1}, cannot proceed.")
+                break
+
+            print(f"{SERVER_INFO_TRAINING} 🏁 ROUND {round_i+1} completed for all datasets in {round(time.time()-start_time, 2)} sec")
 
     def train(self):
         self.__initiate_socket()
